@@ -42,8 +42,9 @@ export type Place = {
   fee?: string;
 };
 
-export type City = {
+export interface City {
   name: string;
+  state?: string;
   country: string;
   latitude: number;
   longitude: number;
