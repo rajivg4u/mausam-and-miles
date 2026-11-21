@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 node_modules
 .next
@@ -11,3 +12,18 @@ build
 .vercel
 .DS_Store
 *.log
+=======
+
+node_modules
+.next
+out
+build
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.vercel
+.DS_Store
+*.log
+>>>>>>> e8c6f1a (Fix Vercel build errors)
