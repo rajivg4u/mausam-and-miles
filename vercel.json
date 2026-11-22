@@ -1,15 +1,9 @@
-<<<<<<< HEAD
+
 
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install"
 }
-=======
 
-{
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install"
-}
->>>>>>> e8c6f1a (Fix Vercel build errors)
+

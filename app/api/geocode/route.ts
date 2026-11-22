@@ -1,9 +1,35 @@
-<<<<<<< HEAD
 
 import { NextRequest, NextResponse } from "next/server";
 
+type GeocodeResult = {
+  id?: number;
+  name: string;
+  country?: string;
+  country_code?: string;
+  latitude: number;
+  longitude: number;
+  admin1?: string;
+  population?: number;
+};
+
+const CITY_ALIASES: Record<string, string> = {
+  bangalore: "Bengaluru",
+  bombay: "Mumbai",
+  madras: "Chennai",
+  calcutta: "Kolkata",
+  poona: "Pune",
+  trivandrum: "Thiruvananthapuram",
+  cochin: "Kochi",
+  mysore: "Mysuru",
+  mangalore: "Mangaluru",
+  gurgaon: "Gurugram",
+  allahabad: "Prayagraj",
+};
+
 export async function GET(request: NextRequest) {
-  const query = new URL(request.url).searchParams.get("q")?.trim();
+  const query = new URL(request.url)
+    .searchParams.get("q")
+    ?.trim();
 
   if (!query || query.length < 2) {
     return NextResponse.json(
@@ -13,105 +39,78 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+    const normalizedQuery = query.toLowerCase();
+    const searchTerm = CITY_ALIASES[normalizedQuery] ?? query;
+
+    const url = new URL(
+      "https://geocoding-api.open-meteo.com/v1/search"
+    );
 
     url.search = new URLSearchParams({
-      name: query,
-      count: "8",
+      name: searchTerm,
+      count: "30",
       language: "en",
-      format: "json"
+      format: "json",
+      countryCode: "IN",
     }).toString();
 
     const response = await fetch(url.toString(), {
-      next: { revalidate: 86400 }
+      next: { revalidate: 86400 },
     });
 
     if (!response.ok) {
       throw new Error("Geocoding provider unavailable");
     }
 
-    const data = await response.json();
+    const data: { results?: GeocodeResult[] } =
+      await response.json();
 
-    const cities = (data.results ?? []).map(
-      (item: {
-        name: string;
-        country?: string;
-        latitude: number;
-        longitude: number;
-        admin1?: string;
-      }) => ({
-        name: item.name,
-        country: item.country ?? "",
-        state: item.admin1 ?? "",
-        latitude: item.latitude,
-        longitude: item.longitude
-      })
-    );
+    const uniqueCities = new Map<string, GeocodeResult>();
 
-    return NextResponse.json(cities);
-  } catch {
-    return NextResponse.json(
-      { error: "Unable to search for this city." },
-      { status: 502 }
-    );
-  }
-}
-=======
+    for (const item of data.results ?? []) {
+      if (item.country_code !== "IN") continue;
 
-import { NextRequest, NextResponse } from "next/server";
+      const key = [
+        item.name.toLowerCase(),
+        (item.admin1 ?? "").toLowerCase(),
+        item.latitude.toFixed(3),
+        item.longitude.toFixed(3),
+      ].join("|");
 
-export async function GET(request: NextRequest) {
-  const query = new URL(request.url).searchParams.get("q")?.trim();
-
-  if (!query || query.length < 2) {
-    return NextResponse.json(
-      { error: "Enter a city name." },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
-
-    url.search = new URLSearchParams({
-      name: query,
-      count: "8",
-      language: "en",
-      format: "json"
-    }).toString();
-
-    const response = await fetch(url.toString(), {
-      next: { revalidate: 86400 }
-    });
-
-    if (!response.ok) {
-      throw new Error("Geocoding provider unavailable");
+      if (!uniqueCities.has(key)) {
+        uniqueCities.set(key, item);
+      }
     }
 
-    const data = await response.json();
+    const cities = [...uniqueCities.values()]
+      .sort((a, b) => {
+        const aExact =
+          a.name.toLowerCase() === searchTerm.toLowerCase();
+        const bExact =
+          b.name.toLowerCase() === searchTerm.toLowerCase();
 
-    const cities = (data.results ?? []).map(
-      (item: {
-        name: string;
-        country?: string;
-        latitude: number;
-        longitude: number;
-        admin1?: string;
-      }) => ({
+        if (aExact !== bExact) {
+          return aExact ? -1 : 1;
+        }
+
+        return (b.population ?? 0) - (a.population ?? 0);
+      })
+      .slice(0, 8)
+      .map((item) => ({
         name: item.name,
-        country: item.country ?? "",
+        country: item.country ?? "India",
         state: item.admin1 ?? "",
         latitude: item.latitude,
-        longitude: item.longitude
-      })
-    );
+        longitude: item.longitude,
+      }));
 
     return NextResponse.json(cities);
-  } catch {
+  } catch (error) {
+    console.error("Geocoding error:", error);
+
     return NextResponse.json(
       { error: "Unable to search for this city." },
       { status: 502 }
     );
   }
 }
->>>>>>> e8c6f1a (Fix Vercel build errors)
