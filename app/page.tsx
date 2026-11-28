@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   useCallback,
@@ -54,6 +55,7 @@ const DEFAULT_CITY: City = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [city, setCity] = useState<City>(DEFAULT_CITY);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<City[]>([]);
@@ -107,6 +109,12 @@ export default function Home() {
     };
   }, []);
 
+  const requireLogin = () => {
+    if (!authReady) return false;
+    if (!isAuthenticated) { router.push("/login?next=%2F"); return false; }
+    return true;
+  };
+
   async function logOut() {
     setLoggingOut(true);
     try {
@@ -115,6 +123,12 @@ export default function Home() {
       if (error) throw error;
       setIsAuthenticated(false);
       setUserName(null);
+      setWeather(null);
+      setPlaces([]);
+      setSearch("");
+      setSearchResults([]);
+      setTab("discover");
+      router.refresh();
     } catch {
       setError("Unable to log out. Please try again.");
     } finally {
@@ -173,9 +187,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!authReady || !isAuthenticated) return;
     void loadWeather(city);
     void loadPlaces(city, radius);
-  }, [city, radius, loadWeather, loadPlaces]);
+  }, [city, radius, loadWeather, loadPlaces, authReady, isAuthenticated]);
 
   useEffect(() => {
     try {
@@ -229,7 +244,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (search.trim().length < 2) {
+    if (!authReady || !isAuthenticated || search.trim().length < 2) {
       searchRequestId.current += 1;
       setSearchResults([]);
       setSearchingCities(false);
@@ -239,7 +254,7 @@ export default function Home() {
       void searchCities(search);
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [search, searchCities]);
+  }, [search, searchCities, authReady, isAuthenticated]);
 
   const selectCity = (selected: City) => {
     searchRequestId.current += 1;
@@ -256,6 +271,7 @@ export default function Home() {
 
   
 const useMyLocation = () => {
+  if (!requireLogin()) return;
   if (!navigator.geolocation) {
     setError("Location is not supported by this browser.");
     return;
@@ -326,7 +342,7 @@ const useMyLocation = () => {
       );
     }
 
-    return result;
+    return result.sort((a, b) => a.distance - b.distance);
   }, [places, category]);
 
   const savedPlaces = places.filter((place) => saved.includes(place.id));
@@ -400,7 +416,7 @@ const useMyLocation = () => {
   );
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${!isAuthenticated ? " guest-shell" : ""}`}>
       <header className="topbar">
         <Link className="brand" href="/">
           <span className="brand-icon"><CloudSun size={25} /></span>
@@ -413,19 +429,19 @@ const useMyLocation = () => {
         <nav className="desktop-nav">
           <button
             className={tab === "discover" ? "nav-active" : ""}
-            onClick={() => setTab("discover")}
+            onClick={() => { if (requireLogin()) setTab("discover"); }}
           >
             Discover
           </button>
           <button
             className={tab === "planner" ? "nav-active" : ""}
-            onClick={() => setTab("planner")}
+            onClick={() => { if (requireLogin()) setTab("planner"); }}
           >
             Trip planner
           </button>
           <button
             className={tab === "saved" ? "nav-active" : ""}
-            onClick={() => setTab("saved")}
+            onClick={() => { if (requireLogin()) setTab("saved"); }}
           >
             Saved places
           </button>
@@ -466,7 +482,10 @@ const useMyLocation = () => {
               <div className="search-box">
                 <Search size={20} />
                 <input
-                  value={search}
+                  value={isAuthenticated ? search : ""}
+                  readOnly={!authReady || !isAuthenticated}
+                  onFocus={() => { if (authReady && !isAuthenticated) router.push("/login?next=%2F"); }}
+                  onClick={() => { if (authReady && !isAuthenticated) router.push("/login?next=%2F"); }}
                   onChange={(event) => {
                     setSearch(event.target.value);
                     setSearchResults([]);
@@ -475,13 +494,13 @@ const useMyLocation = () => {
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
-                      void searchCities(search);
+                      if (requireLogin()) void searchCities(search);
                     }
                     if (event.key === "Escape") {
                       setSearchResults([]);
                     }
                   }}
-                  placeholder="Search an Indian city..."
+                  placeholder="Search a City, Town or Place..."
                   aria-label="Search for a city"
                   aria-autocomplete="list"
                   aria-controls="city-search-suggestions"
@@ -489,12 +508,12 @@ const useMyLocation = () => {
                   role="combobox"
                   autoComplete="off"
                 />
-                <button type="button" onClick={() => void searchCities(search)}>
+                <button type="button" onClick={() => { if (requireLogin()) void searchCities(search); }}>
                   Search
                 </button>
               </div>
 
-              {searchResults.length > 0 && (
+              {isAuthenticated && searchResults.length > 0 && (
                 <div className="search-results" id="city-search-suggestions" role="listbox">
                   {searchResults.map((result, index) => (
                     <button
@@ -517,16 +536,48 @@ const useMyLocation = () => {
             </div>
 
             <button className="location-button" onClick={useMyLocation}>
-              <Navigation size={16} /> Use my location
+              <Navigation size={16} /> Use my current location
             </button>
           </div>
 
           {error && <p className="error-message">{error}</p>}
+          {!isAuthenticated && (
+            <section className="guest-features" aria-label="What you can do with Mausam & Miles">
+              <article className="guest-feature">
+                <CloudSun size={28} aria-hidden="true" />
+                <h2>Travel smarter</h2>
+                <p>Know the weather before you go.</p>
+              </article>
+              <article className="guest-feature">
+                <MapPin size={28} aria-hidden="true" />
+                <h2>Discover more</h2>
+                <p>Explore nearby attractions and hidden gems.</p>
+              </article>
+              <article className="guest-feature">
+                <CalendarDays size={28} aria-hidden="true" />
+                <h2>Plan with ease</h2>
+                <p>Plan your next getaway and estimate costs.</p>
+              </article>
+            </section>
+          )}
+          {authReady && !isAuthenticated && (
+            <p className="guest-registration">
+              <Link href="/login">Log in</Link> or{" "}
+              <Link href="/signup">create a free account</Link> to start exploring.
+            </p>
+          )}
         </div>
+        {!isAuthenticated && (
+          <footer className="guest-footer">
+            <div className="guest-footer-brand"><CloudSun size={18} aria-hidden="true" /> Mausam &amp; Miles</div>
+            <p>Weather data: Open-Meteo. Map data: OpenStreetMap contributors. Attraction data: Wikipedia and OpenStreetMap contributors.</p>
+            <p>Explore responsibly. Check local conditions before travelling.</p>
+          </footer>
+        )}
       </section>
 
       <div className="content">
-        {tab === "discover" && (
+        {authReady && isAuthenticated && tab === "discover" && (
           <>
             <div className="section-heading">
               <div>
@@ -636,7 +687,7 @@ const useMyLocation = () => {
                   <div className="eyebrow">EXPLORE AROUND YOU</div>
                   <h2>Nearby attractions</h2>
                   <p className="muted">
-                    Discover places around {city.name}.
+                    Showing up to 5 nearest places around {city.name}.
                   </p>
                 </div>
                 <div className="radius-control">
@@ -671,19 +722,17 @@ const useMyLocation = () => {
                 ))}
               </div>
 
-              {loadingPlaces ? (
-                <div className="loading-card">Finding nearby attractions...</div>
-              ) : (
-                <div className="place-layout">
-                  <div className="place-list">
-                    {filteredPlaces.length === 0 && (
+              <div className="place-layout">
+                  <div className="place-list" key={`${city.latitude}:${city.longitude}:${radius}:${category}`} tabIndex={0} role="region" aria-label="Nearby attractions, scroll for more results">
+                    {loadingPlaces && <div className="loading-card">Finding nearby attractions...</div>}
+                    {!loadingPlaces && filteredPlaces.length === 0 && (
                       <p className="muted">
                         No attractions found in this radius. Try a larger
                         search radius.
                       </p>
                     )}
 
-                    {filteredPlaces.map((place) => (
+                    {!loadingPlaces && filteredPlaces.map((place) => (
                       <article className="place-card" key={place.id}>
                         <div className="place-icon">📍</div>
                         <div className="place-info">
@@ -720,16 +769,15 @@ const useMyLocation = () => {
                     <MapView
                       latitude={city.latitude}
                       longitude={city.longitude}
-                      places={filteredPlaces}
+                      places={loadingPlaces ? [] : filteredPlaces}
                     />
                   </div>
                 </div>
-              )}
             </section>
           </>
         )}
 
-        {tab === "planner" && (
+        {authReady && isAuthenticated && tab === "planner" && (
           <section className="section-block planner-section">
             <div className="eyebrow">YOUR NEXT GETAWAY</div>
             <h2>Plan your trip</h2>
@@ -856,7 +904,7 @@ const useMyLocation = () => {
           </section>
         )}
 
-        {tab === "saved" && (
+        {authReady && isAuthenticated && tab === "saved" && (
           <section className="section-block">
             <div className="eyebrow">YOUR PERSONAL COLLECTION</div>
             <h2>Saved places</h2>
@@ -909,19 +957,19 @@ const useMyLocation = () => {
       <nav className="mobile-nav">
         <button
           className={tab === "discover" ? "nav-active" : ""}
-          onClick={() => setTab("discover")}
+          onClick={() => { if (requireLogin()) setTab("discover"); }}
         >
           <Compass size={19} /> Discover
         </button>
         <button
           className={tab === "planner" ? "nav-active" : ""}
-          onClick={() => setTab("planner")}
+          onClick={() => { if (requireLogin()) setTab("planner"); }}
         >
           <CalendarDays size={19} /> Plan
         </button>
         <button
           className={tab === "saved" ? "nav-active" : ""}
-          onClick={() => setTab("saved")}
+          onClick={() => { if (requireLogin()) setTab("saved"); }}
         >
           <Heart size={19} /> Saved
         </button>

@@ -22,15 +22,18 @@ export async function middleware(request: NextRequest) {
     "/auth/callback",
     "/forgot-password",
     "/reset-password",
+    "/verify-otp",
   ];
 
   const isPublicPath = publicPaths.includes(pathname);
+  const isApi = pathname.startsWith("/api/");
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   if (!url || !key) {
+    if (isApi) return NextResponse.json({ error: "Authentication unavailable" }, { status: 503 });
     return NextResponse.next({ request });
   }
 
@@ -68,6 +71,11 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    if (isApi) {
+      const denied = NextResponse.json({ error: "Authentication required" }, { status: 401, headers: { "Cache-Control": "private, no-store" } });
+      response.cookies.getAll().forEach(cookie => denied.cookies.set(cookie));
+      return denied;
+    }
     const redirectUrl = request.nextUrl.clone();
 
     redirectUrl.pathname = "/login";
@@ -87,6 +95,7 @@ export async function middleware(request: NextRequest) {
     return redirectResponse;
   }
 
+  if (isApi) response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
 
@@ -98,5 +107,7 @@ export const config = {
     "/forgot-password",
     "/reset-password",
     "/auth/callback",
+    "/verify-otp",
+    "/api/:path*",
   ],
 };

@@ -2,8 +2,9 @@
 
 "use client";
 
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
+import { useEffect } from "react";
 import type { Place } from "@/lib/types";
 
 import "leaflet/dist/leaflet.css";
@@ -21,6 +22,25 @@ const attractionIcon = L.divIcon({
   iconAnchor: [16, 28]
 });
 
+function MapLayout({ latitude, longitude }: Pick<Props, "latitude" | "longitude">) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([latitude, longitude], map.getZoom());
+  }, [map, latitude, longitude]);
+  useEffect(() => {
+    let frame = 0;
+    const resize = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(map.getContainer());
+    resize();
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [map]);
+  return null;
+}
+
 export default function MapView({
   latitude,
   longitude,
@@ -33,6 +53,7 @@ export default function MapView({
       scrollWheelZoom
       className="map-container"
     >
+      <MapLayout latitude={latitude} longitude={longitude} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -2234,3 +2234,184 @@ a {
     width: 100%;
   }
 }
+
+/* V4.2 — guest landing only; reuse the original hero gradient. */
+.guest-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.guest-shell > .topbar { flex-shrink: 0; }
+.guest-shell > .content { display: none; }
+.guest-shell > .hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-top: clamp(28px, 6vh, 62px);
+  padding-bottom: 20px;
+  gap: 28px;
+}
+.guest-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 880px;
+  margin: clamp(24px, 5vh, 48px) auto 0;
+}
+.guest-feature {
+  padding: 20px 14px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.07);
+  border-radius: 14px;
+  transition: background .2s ease, transform .2s ease;
+}
+.guest-feature > svg { color: #b8d8c8; }
+.guest-feature h2 {
+  font-family: Manrope, sans-serif;
+  font-size: 17px;
+  margin: 9px 0 5px;
+  color: white;
+}
+.guest-shell .guest-feature p { font-size: 13px; margin: 0; }
+.guest-footer {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.22);
+  text-align: center;
+}
+.guest-footer-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.guest-shell .guest-footer p { font-size: 11px; margin: 5px auto 0; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .guest-feature:hover { background: rgba(255,255,255,.12); transform: translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guest-feature { transition: none; }
+}
+@media (max-width: 650px) {
+  .guest-features { grid-template-columns: 1fr; gap: 10px; }
+  .guest-feature { padding: 16px; }
+  .guest-shell > .hero { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+}
+
+/* V4.2: reserve the height of five recommendation cards on desktop. */
+.place-layout {
+  --recommendation-card-height: 132px;
+  --recommendation-gap: 11px;
+  --recommendation-map-height: calc(5 * var(--recommendation-card-height) + 4 * var(--recommendation-gap));
+  align-items: stretch;
+}
+.place-layout > .place-list {
+  gap: var(--recommendation-gap);
+  align-self: start;
+  justify-content: flex-start;
+}
+.place-layout > .place-list > .place-card {
+  min-height: 0;
+  height: auto;
+  flex: 0 0 auto;
+}
+.place-layout > .map-panel {
+  position: relative;
+  min-height: var(--recommendation-map-height);
+  height: auto;
+}
+.place-layout > .map-panel > .map-container,
+.place-layout > .map-panel > .map-loading {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .place-layout > .place-list > .place-card { min-height: 0; }
+  .place-layout > .map-panel { min-height: 350px; height: 350px; }
+}
+
+/* V4.2: scroll all nearby results independently of the map. */
+.place-layout {
+  --recommendation-map-height: 704px;
+  align-items: start;
+}
+.place-layout > .place-list {
+  height: var(--recommendation-map-height);
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--mint);
+  padding-right: 8px;
+}
+.place-layout > .place-list:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.place-layout > .map-panel {
+  height: var(--recommendation-map-height);
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .place-layout > .place-list { height: auto; max-height: 704px; }
+  .place-layout > .map-panel { height: 350px; min-height: 350px; }
+}
+
+/* Attractions scrollbar - final override */
+.place-layout > .place-list {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+
+.place-layout > .place-list::-webkit-scrollbar {
+  width: 12px;
+}
+
+.place-layout > .place-list::-webkit-scrollbar-track {
+  background: var(--mint);
+  border-radius: 10px;
+}
+
+.place-layout > .place-list::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 10px;
+  min-height: 70px;
+}
+
+.place-layout > .place-list::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+.place-layout > .place-list::-webkit-scrollbar-button {
+  display: none;
+}
+/* Guest registration links below feature cards */
+.guest-shell .guest-registration {
+  margin: 24px auto 0;
+  text-align: center;
+}
+.guest-registration a {
+  color: white;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.guest-registration a:hover {
+  color: #b8d8c8;
+}
+.guest-registration a:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 4px;
+  border-radius: 2px;
+}

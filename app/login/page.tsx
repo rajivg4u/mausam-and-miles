@@ -53,7 +53,7 @@ function LoginForm() {
 
       const next = searchParams.get("next");
       const destination =
-        next && next.startsWith("/") && !next.startsWith("//")
+        next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")
           ? next
           : "/";
 

@@ -1,3 +1,4 @@
+import { requireApiUser } from "@/lib/supabase/require-user";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -31,6 +32,8 @@ async function nearby(db: DB, lat: number, lon: number, radius: number): Promise
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await requireApiUser();
+  if (denied) return denied;
   const params = request.nextUrl.searchParams;
   const latRaw = params.get("lat");
   const lonRaw = params.get("lon");

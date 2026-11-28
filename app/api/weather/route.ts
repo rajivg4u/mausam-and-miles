@@ -1,8 +1,11 @@
+import { requireApiUser } from "@/lib/supabase/require-user";
 
 
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
+  const denied = await requireApiUser();
+  if (denied) return denied;
   const { searchParams } = new URL(request.url);
 
   const latitude = Number(searchParams.get("lat"));

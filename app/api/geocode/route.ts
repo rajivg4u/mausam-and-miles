@@ -1,3 +1,4 @@
+import { requireApiUser } from "@/lib/supabase/require-user";
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -27,6 +28,8 @@ const CITY_ALIASES: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  const denied = await requireApiUser();
+  if (denied) return denied;
   const query = new URL(request.url)
     .searchParams.get("q")
     ?.trim();
