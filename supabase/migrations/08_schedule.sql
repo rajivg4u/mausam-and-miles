@@ -1,0 +1,3 @@
+select cron.schedule('mausam-attractions-v4','* * * * *',
+'SELECT net.http_post(url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = ''attractions_worker_url''), headers := jsonb_build_object(''Content-Type'',''application/json'',''x-worker-token'',(SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = ''attractions_worker_token'')), body := ''{}''::jsonb, timeout_milliseconds := 60000) WHERE EXISTS (SELECT 1 FROM public.attraction_import_jobs WHERE (status IN (''pending'',''failed'') AND available_at <= now()) OR (status = ''running'' AND lease_until < now()));');
+select cron.alter_job(jobid, active := true) from cron.job where jobname='mausam-attractions-v4';
